@@ -1,0 +1,29 @@
+services:
+  mitmproxy:
+    image: mitmproxy/mitmproxy:12
+    container_name: mitmproxy
+    environment:
+      PYTHONUNBUFFERED: "1" # without this, mitmweb's stdout is block-buffered and `docker compose logs` stays empty
+    command: >
+      mitmweb
+      --web-host 0.0.0.0
+      --no-web-open
+      --mode reverse:https://repo1.maven.org
+      --save-stream-file /home/mitmproxy/.mitmproxy/central_flows.mitm
+      --set web_password=mitmweb
+    ports:
+      - "8081:8081" # Web UI
+#      - "8080:8080" # Reverse proxy port
+    networks:
+      default:
+        priority: 100
+      kind:
+        priority: 0
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M

@@ -1,0 +1,97 @@
+# Services that store or serve build artifacts: S3-compatible storage for TeamCity (MinIO, Garage) and a Docker registry.
+services:
+
+  # Accessed via nginx (TeamCity won't work with its API without TLS)
+  minio:
+    image: minio/minio:${MINIO_VERSION}
+    hostname: minio
+    command: minio server /data --console-address ":9001"
+    expose:
+      - "9000" # MinIO API
+      - "9001" # MinIO Console
+    volumes:
+      - ./minio/data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_SITE_REGION: "us-west-2"
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      default:
+        priority: 100
+      kind:
+        priority: 0
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Accessed via nginx (TeamCity won't work with its API without TLS)
+  garage:
+    image: dxflrs/garage:v2.3.0
+    command: /garage server --single-node --default-bucket
+    expose:
+      - "3900"
+      - "3901"
+      - "3902"
+      - "3903"
+    environment:
+      GARAGE_DEFAULT_ACCESS_KEY: "GK0cc9dc5750022571c8fe1344a7248d69"
+      GARAGE_DEFAULT_SECRET_KEY: "e42f5acd27dc21fe5d9618d57b883b2c20e02f77a378968801f9f1c86838cced"
+      GARAGE_DEFAULT_BUCKET: "default-bucket"
+      # See garage.toml for other settings
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml
+      - ./garage/meta:/var/lib/garage/meta
+      - ./garage/data:/var/lib/garage/data
+    networks:
+      default:
+        priority: 100
+      kind:
+        priority: 0
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # Accessed via nginx (Docker requires TLS to push). Log in as teamcity/teamcity.
+  registry:
+    image: registry:3
+    hostname: registry
+    expose:
+      - "4999"
+    environment:
+      REGISTRY_HTTP_ADDR: 0.0.0.0:4999
+      REGISTRY_AUTH: htpasswd
+      REGISTRY_AUTH_HTPASSWD_REALM: Registry-Realm
+      REGISTRY_AUTH_HTPASSWD_PATH: /auth/registry.passwd
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+    volumes:
+      - ./registry/data:/data
+      - ./registry/auth:/auth
+    networks:
+      default:
+        priority: 100
+      kind:
+        priority: 0
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 50M

@@ -1,0 +1,24 @@
+services:
+  perforce:
+    image: tolache/perforce:${P4_TAG}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    hostname: perforce
+    volumes:
+      - ./data:/opt/perforce/servers/master
+    ports:
+      - "1666:1666"
+    networks:
+      default:
+        priority: 100
+      kind:
+        priority: 0
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 32M

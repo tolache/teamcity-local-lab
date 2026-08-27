@@ -1,0 +1,113 @@
+include:
+  - services/perforce/docker-compose.yml
+  - services/nginx/docker-compose.yml
+  - services/artifacts/docker-compose.yml # requires services/nginx/docker-compose.yml
+  - services/ldap/docker-compose.yml # requires services/nginx/docker-compose.yml
+#  - services/sonarqube/docker-compose.yml
+#  - services/mitmproxy/docker-compose.yml
+
+services:
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
+    environment:
+      POSTGRES_PASSWORD: teamcity
+      POSTGRES_USER: teamcity
+      POSTGRES_DB: teamcity
+    volumes:
+      - ./services/teamcity/postgres/data:${POSTGRES_DATA_DIR}
+    ports:
+      - "5431:5432" # optional, for access from Docker host
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U teamcity -d teamcity" ]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+      timeout: 10s
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 64M
+
+  teamcity:
+    image: tolache/teamcity-server:${TC_VERSION}
+    build:
+      context: services/teamcity
+      dockerfile: server/Dockerfile
+      additional_contexts:
+        certs: ./certs # repo-root certs/ is outside this build context
+      args:
+        # Multi-arch tag: Docker picks amd64 or arm64 to match the host.
+        TC_TAG: ${TC_VERSION}
+    volumes:
+      - ./services/teamcity/server/data:/data/teamcity_server/datadir
+      - ./services/teamcity/server/logs:/opt/teamcity/logs
+    ports:
+      - ${TC_HOST_PORT}:8111
+      - ${TC_HOST_HTTPS_PORT}:8443
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://teamcity:8111/healthCheck/ready" ]
+      interval: 10s
+      retries: 30
+      start_period: 30s
+      timeout: 10s
+    environment:
+      TEAMCITY_SERVER_MEM_OPTS: -Xmx${TC_HEAP}
+      TEAMCITY_STOP_WAIT_TIME: 3m
+    networks:
+      default:
+        priority: 100
+      kind:
+        priority: 0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      perforce:
+        condition: service_started
+    stop_grace_period: 3m5s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: ${TC_MEM_LIMIT}
+        reservations:
+          cpus: '0.5'
+          memory: ${TC_MEM_RESERVATION}
+
+  teamcity-agent:
+    image: tolache/teamcity-agent:${TC_VERSION}
+    build:
+      context: services/teamcity
+      dockerfile: agent/Dockerfile
+      additional_contexts:
+        certs: ./certs # repo-root certs/ is outside this build context
+      args:
+        # Since 2026.1, the tag is multi-arch. 2025.11 and older - use ${TC_VERSION}-linux-arm64-sudo if Docker host is ARM.
+        TC_TAG: ${TC_VERSION}-linux-sudo
+    environment:
+      SERVER_URL: "http://teamcity:8111"
+      AGENT_NAME: teamcity-agent
+    volumes:
+      - ./services/teamcity/agent/conf:/data/teamcity_agent/conf
+      - ./services/teamcity/agent/logs:/opt/buildagent/logs
+    depends_on:
+      teamcity:
+        condition: service_healthy
+    stop_grace_period: 1m
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 640M
+        reservations:
+          cpus: '0.25'
+          memory: 384M
+
+networks:
+  kind:
+    external: true

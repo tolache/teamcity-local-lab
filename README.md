@@ -18,16 +18,28 @@ A TeamCity lab in Docker Compose, running entirely on your machine: PostgreSQL, 
    - Windows: `pwsh ./scripts/setup-certs.ps1`
 5. Start it (the first run builds three images, so give it a while): `docker compose up -d`
 6. While the `teamcity` container is `Waiting`, open [http://localhost:8110](http://localhost:8110) and accept EULA.
-
 7. Confirm `docker compose up -d` exited successfully. The lab is ready to use.
 
 ## Daily use
 
-|         |                                                                                                                                                                                                 |
-|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Start   | `docker compose up -d`                                                                                                                                                                          |
-| Stop    | `docker compose stop`                                                                                                                                                                           |
-| Upgrade | `docker compose stop`, bump `TC_VERSION` in `.env`, `docker compose up -d --build teamcity teamcity-agent`, then `./scripts/move-latest-tag.sh` (Windows: `pwsh ./scripts/move-latest-tag.ps1`) |
+### Start
+
+```shell
+docker compose up -d
+```
+
+### Stop
+
+```shell
+docker compose stop
+```
+
+### Upgrade
+
+1. `docker compose stop`
+2. Bump `TC_VERSION` in `.env`
+3. `docker compose up -d --build teamcity teamcity-agent`
+4.  While the `teamcity` container is `Waiting`, go to http://localhost:8110 and upgrade finish the upgrade via UI.
 
 ## [Optional] Cloud agents (local Kubernetes)
 

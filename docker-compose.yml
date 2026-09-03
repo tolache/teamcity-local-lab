@@ -1,11 +1,3 @@
-include:
-  - services/perforce/docker-compose.yml
-  - services/nginx/docker-compose.yml
-  - services/artifacts/docker-compose.yml # requires services/nginx/docker-compose.yml
-  - services/ldap/docker-compose.yml # requires services/nginx/docker-compose.yml
-#  - services/sonarqube/docker-compose.yml
-#  - services/mitmproxy/docker-compose.yml
-
 services:
 
   postgres:
@@ -16,8 +8,6 @@ services:
       POSTGRES_DB: teamcity
     volumes:
       - ./services/teamcity/postgres/data:${POSTGRES_DATA_DIR}
-    ports:
-      - "5431:5432" # optional, for access from Docker host
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U teamcity -d teamcity" ]
       interval: 10s
@@ -35,21 +25,12 @@ services:
           memory: 64M
 
   teamcity:
-    image: tolache/teamcity-server:${TC_VERSION}
-    build:
-      context: services/teamcity
-      dockerfile: server/Dockerfile
-      additional_contexts:
-        certs: ./certs # repo-root certs/ is outside this build context
-      args:
-        # Multi-arch tag: Docker picks amd64 or arm64 to match the host.
-        TC_TAG: ${TC_VERSION}
+    image: jetbrains/teamcity-server:${TC_VERSION}
     volumes:
       - ./services/teamcity/server/data:/data/teamcity_server/datadir
       - ./services/teamcity/server/logs:/opt/teamcity/logs
     ports:
       - ${TC_HOST_PORT}:8111
-      - ${TC_HOST_HTTPS_PORT}:8443
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://teamcity:8111/healthCheck/ready" ]
       interval: 10s
@@ -59,16 +40,9 @@ services:
     environment:
       TEAMCITY_SERVER_MEM_OPTS: -Xmx${TC_HEAP}
       TEAMCITY_STOP_WAIT_TIME: 3m
-    networks:
-      default:
-        priority: 100
-      kind:
-        priority: 0
     depends_on:
       postgres:
         condition: service_healthy
-      perforce:
-        condition: service_started
     stop_grace_period: 3m5s
     deploy:
       resources:
@@ -80,15 +54,7 @@ services:
           memory: ${TC_MEM_RESERVATION}
 
   teamcity-agent:
-    image: tolache/teamcity-agent:${TC_VERSION}
-    build:
-      context: services/teamcity
-      dockerfile: agent/Dockerfile
-      additional_contexts:
-        certs: ./certs # repo-root certs/ is outside this build context
-      args:
-        # Since 2026.1, the tag is multi-arch. 2025.11 and older - use ${TC_VERSION}-linux-arm64-sudo if Docker host is ARM.
-        TC_TAG: ${TC_VERSION}-linux-sudo
+    image: jetbrains/teamcity-agent:${TC_VERSION}
     environment:
       SERVER_URL: "http://teamcity:8111"
       AGENT_NAME: teamcity-agent
@@ -107,7 +73,3 @@ services:
         reservations:
           cpus: '0.25'
           memory: 384M
-
-networks:
-  kind:
-    external: true

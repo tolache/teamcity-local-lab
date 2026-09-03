@@ -1,0 +1,5 @@
+# By changing teamcity.licenseAgreement.accepted to true you indicate that you
+# accept the TeamCity license agreement:
+# https://www.jetbrains.com/legal/docs/teamcity/license/
+
+teamcity.licenseAgreement.accepted=false

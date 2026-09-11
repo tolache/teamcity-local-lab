@@ -6,6 +6,7 @@ Thumbs.db
 .codex
 .gemini
 .junie
+.env
 
 # TLS material - generated locally by scripts/setup-certs.{sh,ps1}, never committed
 certs/*

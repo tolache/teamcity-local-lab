@@ -9,16 +9,17 @@ A TeamCity lab in Docker Compose, running entirely on your machine: PostgreSQL, 
 
 1. Install Docker Desktop and sign in. Give it ~10 GB of memory in **Settings** > **Resources** (the whole lab idles around 3 GB, but `TC_HEAP` in `.env` lets TeamCity grow to 5 GB under load - lower both if your machine is tight).
 2. In Docker Desktop: **Settings** > **Kubernetes** > enable, cluster provisioning method **kind** > **Apply**.
-3. Install mkcert:
+3. `cp .env.example .env` and set `TC_HOSTNAME` in `.env` to your machine's hostname.
+4. Install mkcert:
    - macOS: `brew install mkcert`
    - Windows: `winget install FiloSottile.mkcert`
    - Ubuntu: `sudo apt install mkcert`
-4. Set up certificates (answer the password prompt / trust dialog):
+5. Set up certificates (answer the password prompt / trust dialog):
    - macOS / Linux: `./scripts/setup-certs.sh`
    - Windows: `pwsh ./scripts/setup-certs.ps1`
-5. Start it (the first run builds three images, so give it a while): `docker compose up -d`
-6. While the `teamcity` container is `Waiting`, open [http://localhost:8110](http://localhost:8110) and accept EULA.
-7. Confirm `docker compose up -d` exited successfully. The lab is ready to use.
+6. Start it (the first run builds three images, so give it a while): `docker compose up -d`
+7. While the `teamcity` container is `Waiting`, open [http://localhost:8110](http://localhost:8110) and accept EULA.
+8. Confirm `docker compose up -d` exited successfully. The lab is ready to use.
 
 ## Daily use
 
@@ -39,7 +40,7 @@ docker compose stop
 1. `docker compose stop`
 2. Bump `TC_VERSION` in `.env`
 3. `docker compose up -d --build teamcity teamcity-agent`
-4.  While the `teamcity` container is `Waiting`, go to http://localhost:8110 and upgrade finish the upgrade via UI.
+4. While the `teamcity` container is `Waiting`, go to [http://localhost:8110](http://localhost:8110) and finish the upgrade in the UI.
 
 ## [Optional] Cloud agents (local Kubernetes)
 

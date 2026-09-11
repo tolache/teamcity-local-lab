@@ -95,6 +95,8 @@ services:
     volumes:
       - ./services/teamcity/agent/conf:/data/teamcity_agent/conf
       - ./services/teamcity/agent/logs:/opt/buildagent/logs
+    extra_hosts:
+      - "${TC_HOSTNAME}:host-gateway"
     depends_on:
       teamcity:
         condition: service_healthy

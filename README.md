@@ -24,7 +24,7 @@ docker compose stop
 1. `docker compose stop`
 2. Bump `TC_VERSION` in `.env`
 3. `docker compose up -d --build teamcity teamcity-agent`
-4.  While the `teamcity` container is `Waiting`, go to http://localhost:8111 and upgrade finish the upgrade via UI.
+4. While the `teamcity` container is `Waiting`, go to http://localhost:8111 and finish the upgrade via UI.
 
 ## Delete
 
